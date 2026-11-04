@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>扫雷 · 沫沫的小游戏</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0d141c;color:#e6eef7;font-family:system-ui,"Microsoft YaHei",sans-serif;text-align:center;padding:18px}
+h1{font-size:22px;font-weight:600;margin:6px 0 2px}
+#bar{font-size:15px;color:#8fa6bd;margin-bottom:10px}
+#wrap{display:inline-grid;gap:2px;background:#1b2733;padding:6px;border-radius:10px;user-select:none}
+.c{width:34px;height:34px;border-radius:5px;background:#243342;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;cursor:pointer}
+.c:hover{background:#2c3f52}
+.c.open{background:#16212c;cursor:default}
+.c.open:hover{background:#16212c}
+.c.mine{background:#a33}
+.c.flag{color:#ffd166}
+.n1{color:#7ec8e3}.n2{color:#7ee3a0}.n3{color:#ffb4a2}.n4{color:#c6a2ff}
+.n5{color:#ffd166}.n6{color:#7ee3d1}.n7{color:#eee}.n8{color:#ff9de2}
+button{background:#2c3a48;color:#e6eef7;border:0;padding:9px 18px;font-size:15px;border-radius:7px;cursor:pointer;margin:6px 4px 0}
+a{color:#79b8e8;font-size:14px}
+</style></head><body>
+<h1>扫雷</h1>
+<div id="bar">左键翻开 · 右键插旗</div>
+<div id="wrap"></div>
+<p><button onclick="init()">重新开始</button><br><a href="index.html">回游戏厅</a></p>
+<script>
+const W=10,H=10,M=16;
+let board,mines,open,flag,over,t0,timer;
+const wrap=document.getElementById('wrap'),bar=document.getElementById('bar');
+wrap.style.gridTemplateColumns=`repeat(${W},34px)`;
+function init(){
+  wrap.innerHTML='';board=[];mines=new Set();open=new Set();flag=new Set();over=false;
+  document.querySelectorAll('.c').forEach(e=>{});
+  for(let i=0;i<W*H;i++){const d=document.createElement('div');d.className='c';d.dataset.i=i;
+    d.addEventListener('click',()=>click(i));d.addEventListener('contextmenu',e=>{e.preventDefault();mark(i)});
+    wrap.appendChild(d);}
+  while(mines.size<M)mines.add(Math.floor(Math.random()*W*H));
+  clearInterval(timer);t0=Date.now();
+  timer=setInterval(()=>{if(!over)bar.textContent='用时 '+Math.floor((Date.now()-t0)/1000)+' 秒 · 剩 '+(M-flag.size)+' 雷';},500);
+  draw();
+}
+const ns=i=>{const x=i%W,y=(i-x)/W,o=[];for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;const nx=x+dx,ny=y+dy;if(nx>=0&&nx<W&&ny>=0&&ny<H)o.push(ny*W+nx);}return o;};
+const cnt=i=>ns(i).filter(j=>mines.has(j)).length;
+function click(i){
+  if(over||open.has(i)||flag.has(i))return;
+  if(mines.has(i)){over=true;bar.textContent='踩雷了，重来吧';revealAll(true);return;}
+  flood(i);
+  if(open.size===W*H-M){over=true;bar.textContent='全清！用了 '+Math.floor((Date.now()-t0)/1000)+' 秒';revealAll(false);}
+}
+function flood(i){
+  const st=[i];
+  while(st.length){const c=st.pop();if(open.has(c)||mines.has(c)||flag.has(c))continue;open.add(c);
+    if(cnt(c)===0)ns(c).forEach(j=>{if(!open.has(j))st.push(j)});}
+  draw();
+}
+function mark(i){
+  if(over||open.has(i))return;
+  flag.has(i)?flag.delete(i):flag.add(i);draw();
+}
+function draw(){
+  [...wrap.children].forEach((d,i)=>{
+    d.className='c';d.textContent='';
+    if(flag.has(i)&&!open.has(i)){d.classList.add('flag');d.textContent='⚑';return;}
+    if(!open.has(i))return;
+    d.classList.add('open');
+    if(mines.has(i)){d.classList.add('mine');d.textContent='✳';return;}
+    const n=cnt(i);if(n){d.textContent=n;d.classList.add('n'+n);}
+  });
+}
+function revealAll(boom){
+  [...wrap.children].forEach((d,i)=>{if(mines.has(i)&&!flag.has(i)){d.classList.add('open','mine');d.textContent='✳';}});
+}
+init();
+</script></body></html>

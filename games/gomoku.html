@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>五子棋 · 沫沫的小游戏</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0d141c;color:#e6eef7;font-family:system-ui,"Microsoft YaHei",sans-serif;text-align:center;padding:16px}
+h1{font-size:22px;font-weight:600;margin:6px 0}
+#bar{font-size:15px;color:#8fa6bd;height:22px;margin-bottom:8px}
+canvas{background:#e2b978;border-radius:8px;touch-action:manipulation;max-width:96vw;height:auto}
+button{background:#2c3a48;color:#e6eef7;border:0;padding:9px 18px;font-size:15px;border-radius:7px;cursor:pointer;margin:8px 4px 0}
+a{color:#79b8e8;font-size:14px}
+</style></head><body>
+<h1>五子棋</h1>
+<div id="bar">你执黑先行</div>
+<canvas id="cv" width="600" height="600"></canvas>
+<p><button onclick="reset()">重新开始</button><br><a href="index.html">回游戏厅</a></p>
+<script>
+const N=15,S=600,C=S/(N+1);
+const cv=document.getElementById('cv'),cx=cv.getContext('2d'),bar=document.getElementById('bar');
+let b,turn,over,last;
+const DIRS=[[1,0],[0,1],[1,1],[1,-1]];
+const SC={(5,2):1e6,(5,1):1e6,(5,0):1e6,(4,2):1e5,(4,1):1e4,(3,2):8000,(3,1):800,(2,2):500,(2,1):60,(1,2):20,(1,1):5};
+function score(i){return SC[i]||0}
+function reset(){b=Array.from({length:N},()=>Array(N).fill(0));turn=1;over=false;last=null;bar.textContent='你执黑先行';draw();}
+function draw(){
+  cx.fillStyle='#e2b978';cx.fillRect(0,0,S,S);
+  cx.strokeStyle='#8a6a3c';cx.lineWidth=1;
+  for(let i=0;i<N;i++){
+    cx.beginPath();cx.moveTo(C,C+i*C);cx.lineTo(C+(N-1)*C,C+i*C);cx.stroke();
+    cx.beginPath();cx.moveTo(C+i*C,C);cx.lineTo(C+i*C,C+(N-1)*C);cx.stroke();
+  }
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+    if(!b[y][x])continue;
+    cx.beginPath();cx.arc(C+x*C,C+y*C,C*0.42,0,7);
+    cx.fillStyle=b[y][x]===1?'#16212c':'#f2f6fa';cx.fill();
+    cx.strokeStyle='#5f7a92';cx.stroke();
+  }
+  if(last){cx.beginPath();cx.arc(C+last[0]*C,C+last[1]*C,C*0.14,0,7);cx.fillStyle='#e2553f';cx.fill();}
+}
+function lineScore(x,y,who){
+  let total=0;
+  for(const [dx,dy] of DIRS){
+    let count=1,openEnds=0;
+    for(const s of [1,-1]){
+      let nx=x+dx*s,ny=y+dy*s;
+      while(nx>=0&&nx<N&&ny>=0&&ny<N&&b[ny][nx]===who){count++;nx+=dx*s;ny+=dy*s;}
+      if(nx>=0&&nx<N&&ny>=0&&ny<N&&b[ny][nx]===0)openEnds++;
+    }
+    total+=score([Math.min(count,5),openEnds]);
+  }
+  return total;
+}
+function winAt(x,y){
+  const who=b[y][x];
+  for(const [dx,dy] of DIRS){
+    let c=1;
+    for(const s of [1,-1]){let nx=x+dx*s,ny=y+dy*s;
+      while(nx>=0&&nx<N&&ny>=0&&ny<N&&b[ny][nx]===who){c++;nx+=dx*s;ny+=dy*s;}}
+    if(c>=5)return true;
+  }
+  return false;
+}
+function place(x,y,who){
+  b[y][x]=who;last=[x,y];
+  if(winAt(x,y)){over=true;bar.textContent=who===1?'你赢了':'我赢了';draw();return true;}
+  return false;
+}
+function aiMove(){
+  const occ=[];
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(b[y][x])occ.push([x,y]);
+  if(!occ.length)return [7,7];
+  let best=[],bestScore=-1;
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+    if(b[y][x])continue;
+    let near=occ.some(([ox,oy])=>Math.abs(x-ox)<=2&&Math.abs(y-oy)<=2);
+    if(!near)continue;
+    const sc=lineScore(x,y,2)*1.0+lineScore(x,y,1)*0.75+Math.random()*30;
+    if(sc>bestScore){bestScore=sc;best=[[x,y]];}else if(sc===bestScore)best.push([x,y]);
+  }
+  if(!best.length){for(let y=0;y<N;y++)for(let x=0;x<N;x++)if(!b[y][x])return [x,y];}
+  return best[Math.floor(Math.random()*best.length)];
+}
+cv.addEventListener('click',e=>{
+  if(over||turn!==1)return;
+  const r=cv.getBoundingClientRect();
+  const x=Math.round((e.clientX-r.left)/r.width*S/C-1);
+  const y=Math.round((e.clientY-r.top)/r.height*S/C-1);
+  if(x<0||y<0||x>=N||y>=N||b[y][x])return;
+  if(place(x,y,1))return;
+  draw();turn=2;bar.textContent='我在想…';
+  setTimeout(()=>{
+    const [ax,ay]=aiMove();
+    if(!place(ax,ay,2))bar.textContent='轮到你了';
+    draw();turn=1;
+  },350);
+});
+reset();
+</script></body></html>

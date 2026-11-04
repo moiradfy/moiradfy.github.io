@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2048 · 沫沫的小游戏</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0d141c;color:#e6eef7;font-family:system-ui,"Microsoft YaHei",sans-serif;text-align:center;padding:16px}
+h1{font-size:22px;font-weight:600;margin:6px 0}
+#bar{font-size:15px;color:#8fa6bd;margin-bottom:10px}
+#g{display:inline-grid;grid-template-columns:repeat(4,74px);gap:8px;background:#1b2733;padding:8px;border-radius:10px;user-select:none}
+.t{width:74px;height:74px;border-radius:7px;background:#22303f;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700}
+button{background:#2c3a48;color:#e6eef7;border:0;padding:9px 18px;font-size:15px;border-radius:7px;cursor:pointer;margin:10px 4px 0}
+a{color:#79b8e8;font-size:14px}
+</style></head><body>
+<h1>2048</h1>
+<div id="bar">用方向键或者滑动</div>
+<div id="g"></div>
+<p><button onclick="reset()">重新开始</button><br><a href="index.html">回游戏厅</a></p>
+<script>
+const COL={2:'#2f3f52',4:'#3a5068',8:'#2f7f8f',16:'#3f8f6a',32:'#8f7f2f',64:'#8f4f2f',128:'#7f3f8f',256:'#3f4f9f',512:'#9f3f5f',1024:'#9f7f1f',2048:'#b03a2e'};
+let g,bar=document.getElementById('bar'),box=document.getElementById('g');
+function reset(){g=Array.from({length:4},()=>Array(4).fill(0));add();add();draw();bar.textContent='凑到 2048';}
+function add(){
+  const e=[];for(let y=0;y<4;y++)for(let x=0;x<4;x++)if(!g[y][x])e.push([x,y]);
+  if(!e.length)return;const [x,y]=e[Math.floor(Math.random()*e.length)];
+  g[y][x]=Math.random()<0.9?2:4;
+}
+function draw(){
+  box.innerHTML='';
+  for(let y=0;y<4;y++)for(let x=0;x<4;x++){
+    const d=document.createElement('div');d.className='t';
+    const v=g[y][x];d.textContent=v||'';
+    if(v){d.style.background=COL[v]||'#b03a2e';d.style.color='#f4f8fc';}
+    box.appendChild(d);
+  }
+}
+function slide(row){
+  const a=row.filter(v=>v);const out=[];
+  for(let i=0;i<a.length;i++){
+    if(a[i]===a[i+1]){out.push(a[i]*2);i++;}
+    else out.push(a[i]);
+  }
+  while(out.length<4)out.push(0);
+  return out;
+}
+function move(dir){
+  const before=JSON.stringify(g);
+  for(let i=0;i<4;i++){
+    let line;
+    if(dir==='l'||dir==='r')line=[0,1,2,3].map(j=>g[i][j]);
+    else line=[0,1,2,3].map(j=>g[j][i]);
+    if(dir==='r'||dir==='d')line.reverse();
+    line=slide(line);
+    if(dir==='r'||dir==='d')line.reverse();
+    for(let j=0;j<4;j++){if(dir==='l'||dir==='r')g[i][j]=line[j];else g[j][i]=line[j];}
+  }
+  if(JSON.stringify(g)!==before){add();draw();check();}
+}
+function check(){
+  if(g.some(r=>r.includes(2048))){bar.textContent='到 2048 了，厉害';return;}
+  const full=!g.some(r=>r.includes(0));
+  if(full){
+    let can=false;
+    for(let y=0;y<4;y++)for(let x=0;x<4;x++){
+      if(x<3&&g[y][x]===g[y][x+1])can=true;
+      if(y<3&&g[y][x]===g[y+1][x])can=true;
+    }
+    if(!can)bar.textContent='走不动了，重开吧';
+  }
+}
+document.addEventListener('keydown',e=>{
+  const m={ArrowLeft:'l',ArrowRight:'r',ArrowUp:'u',ArrowDown:'d'}[e.key];
+  if(m){e.preventDefault();move(m);}
+});
+let sx=0,sy=0;
+document.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;},{passive:true});
+document.addEventListener('touchend',e=>{
+  const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;
+  if(Math.max(Math.abs(dx),Math.abs(dy))<30)return;
+  move(Math.abs(dx)>Math.abs(dy)?(dx>0?'r':'l'):(dy>0?'d':'u'));
+},{passive:true});
+reset();
+</script></body></html>
